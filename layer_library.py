@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import activation_library as ac
 
 class Conv_Layer:
     def __init__(self, filter_size=5, filter_count=6, stride=1):
@@ -16,7 +17,7 @@ class Conv_Layer:
 
         resulting_matrix = np.zeros((self.filter_count, resulting_dimension, resulting_dimension))
 
-        max_stride = inputs.shape[0]-self.size
+        max_stride = inputs.shape[1]-self.size
 
         x_min, x_max = 0, self.size
         y_min, y_max = 0, self.size
@@ -53,12 +54,6 @@ class Conv_Layer:
     def backward_propagation(self):
         pass
 
-    def activation_ReLu(self, inputs):
-        for x in range(inputs.shape[0]):
-            inputs[x][inputs[x]<=0]=0
-
-        return inputs
-
 class Pool_Layer:
     def __init__(self, pooling_type="max", filter_size=2, stride=2):
 
@@ -78,8 +73,8 @@ class Pool_Layer:
 
         max_stride = inputs.shape[1] - self.size
 
-        x_min, x_max = 0, 2
-        y_min, y_max = 0, 2
+        x_min, x_max = 0, self.size
+        y_min, y_max = 0, self.size
 
         current_filter = 0
 
@@ -92,7 +87,7 @@ class Pool_Layer:
                 resulting_matrix[current_filter][int(x_min/2)][int(y_min/2)] = np.max(pooling_matrix)
 
             if (x_min >= max_stride):
-                x_max = 2
+                x_max = self.size
                 x_min = 0
                 y_min += self.stride
                 y_max += self.stride
@@ -109,6 +104,26 @@ class Pool_Layer:
 
         return resulting_matrix
         
+class Fully_Connected_Layer:
+    
+    def __init__(self, inputs, outputs, learning_rate):
+
+        self.input_nodes = inputs
+        self.output_nodes = outputs
+        self.weights = np.random.normal(0.0, pow(self.input_nodes, -0.5), (self.output_nodes, self.input_nodes))
+        self.lr = learning_rate 
+
+    def forward_propagation(self, inputs):
+
+        inputs_array = np.array(inputs, ndmin=2).T
+
+        dot_product = np.dot(self.weights, inputs_array)
+
+        return inputs_array
+
+    def backward_propagation(self):
+        pass
+
 
 def main():
 
@@ -129,25 +144,29 @@ def main():
 
     C1 = Conv_Layer(5, 6, 1)
     convo_1 = C1.forward_propagation(pixels)
-    convo_1 = C1.activation_ReLu(convo_1)
+    convo_1 = ac.activation_ReLu(convo_1)
 
     P1 = Pool_Layer("avg")
     pool_1 = P1.forward_propagation(convo_1)
-    pool_1 = C1.activation_ReLu(pool_1)
+    pool_1 = ac.activation_ReLu(pool_1)
 
     C2 = Conv_Layer(5, 16, 1)
     convo_2 = C2.forward_propagation(pool_1)
-    convo_2 = C2.activation_ReLu(convo_2)
+    convo_2 = ac.activation_ReLu(convo_2)
 
     P2 = Pool_Layer("avg")
     pool_2 = P2.forward_propagation(convo_2)
-    pool_2 = C2.activation_ReLu(pool_2)
+    pool_2 = ac.activation_ReLu(pool_2)
 
     C3 = Conv_Layer(5, 120, 1)
     convo_3 = C3.forward_propagation(pool_2)
-    convo_3 = C3.activation_ReLu(convo_3)
+    convo_3 = ac.activation_ReLu(convo_3).flatten()
 
-    print(convo_3.shape)
+    FC1 = Fully_Connected_Layer(120, 84, 0.02)
+    fc_1 = FC1.forward_propagation(convo_3)
+    fc_1 = ac.activation_ReLu(fc_1).flatten()
+
+    print(fc_1.shape)
 
 if __name__ == '__main__':
     main()
