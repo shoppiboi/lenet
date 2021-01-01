@@ -119,11 +119,10 @@ class Fully_Connected_Layer:
 
         dot_product = np.dot(self.weights, inputs_array)
 
-        return inputs_array
+        return dot_product
 
     def backward_propagation(self):
         pass
-
 
 def main():
 
@@ -144,29 +143,35 @@ def main():
 
     C1 = Conv_Layer(5, 6, 1)
     convo_1 = C1.forward_propagation(pixels)
-    convo_1 = ac.activation_ReLu(convo_1)
+    convo_1 = ac.tanh(convo_1)
 
     P1 = Pool_Layer("avg")
     pool_1 = P1.forward_propagation(convo_1)
-    pool_1 = ac.activation_ReLu(pool_1)
+    pool_1 = ac.tanh(pool_1)
 
     C2 = Conv_Layer(5, 16, 1)
-    convo_2 = C2.forward_propagation(pool_1)
-    convo_2 = ac.activation_ReLu(convo_2)
+    convo_2 = C2.forward_propagation(pool_1) 
+    convo_2 = ac.tanh(convo_2)
 
     P2 = Pool_Layer("avg")
     pool_2 = P2.forward_propagation(convo_2)
-    pool_2 = ac.activation_ReLu(pool_2)
+    pool_2 = ac.tanh(pool_2)
 
     C3 = Conv_Layer(5, 120, 1)
     convo_3 = C3.forward_propagation(pool_2)
-    convo_3 = ac.activation_ReLu(convo_3).flatten()
+    convo_3 = ac.tanh(convo_3).flatten()
 
-    FC1 = Fully_Connected_Layer(120, 84, 0.02)
+    FC1 = Fully_Connected_Layer(120, 84, 0.1)
     fc_1 = FC1.forward_propagation(convo_3)
-    fc_1 = ac.activation_ReLu(fc_1).flatten()
+    fc_1 = ac.tanh(fc_1).flatten()
 
-    print(fc_1.shape)
+    FC2 = Fully_Connected_Layer(84, 10, 0.1)
+    fc_2 = FC2.forward_propagation(fc_1)
+    fc_2 = ac.tanh(fc_2).flatten()
+
+    final_output = ac.softmax(fc_2)
+
+    print(final_output)
 
 if __name__ == '__main__':
     main()
