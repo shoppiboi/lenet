@@ -3,15 +3,16 @@ from matplotlib import pyplot as plt
 import activationlibrary as ac
 
 class StrideLayer:
+
     def __init__(self, kernel_size, stride):
         self.size = kernel_size
         self.stride = stride
 
     #   returns a tuple of adjusted values to proceed with either convolution or pooling
-    def increment_indexes(self, x_min, x_max, y_min, y_max, current_filter, max_stride):  
+    def increment_indexes(self, x_min, x_max, y_min, y_max, current_filter):  
 
         #   if the maximum stride distance has been reached horizontally
-        if (x_min >= max_stride):
+        if (x_min >= self.max_stride):
             x_max = self.size
             x_min = 0
             y_min += self.stride
@@ -21,7 +22,7 @@ class StrideLayer:
             x_min += self.stride
 
         #   if the maximum stride distance has been reached vertically
-        if (y_min > max_stride):
+        if (y_min > self.max_stride):
             current_filter += 1
             x_max = self.size
             x_min = 0
@@ -30,7 +31,20 @@ class StrideLayer:
 
         return x_min, x_max, y_min, y_max, current_filter
 
+    def return_resulting_matrix(self, input_size, z):
+
+        #   calculate the size of the output matrix
+        #   based on the formula: (x-axis - filter_size) / stride + 1
+        resulting_dimension = int(  (input_size-self.size)/self.stride+1   )
+
+        #   the resulting matrix is of matrix-size (z, x, y)
+        return np.zeros((z, resulting_dimension, resulting_dimension))
+
+    def set_max_stride(self, input_x):
+        self.max_stride = input_x-self.size
+
 class Convolutional(StrideLayer):
+    
     def __init__(self, kernel_size=5, filter_count=6, stride=1):
         StrideLayer.__init__(self, kernel_size, stride)
 
@@ -39,23 +53,20 @@ class Convolutional(StrideLayer):
         self.filters = np.random.normal(0.0, pow(self.size, -0.5), (weight_dimension))
 
     def forward_propagation(self, inputs=None):
-        
-        #   calculate the size of the output matrix
-        #   based on the formula: (x-axis - filter_size) / stride + 1
-        resulting_dimension = int(  (inputs.shape[1]-self.size)/self.stride+1   )
+    
+        #   depth (z) of resulting matrix is number of filters
+        resulting_matrix = StrideLayer.return_resulting_matrix(self, 
+                                inputs.shape[1], 
+                                self.filter_count
+                            )
 
-        #   the resulting matrix is of matrix-size (z, x, y)
-        resulting_matrix = np.zeros((self.filter_count, resulting_dimension, resulting_dimension))
-
-        max_stride = inputs.shape[1]-self.size
+        StrideLayer.set_max_stride(self, inputs.shape[1])
 
         x_min, x_max = 0, self.size
         y_min, y_max = 0, self.size
 
         current_filter = 0
-        counter = 0
         while current_filter < self.filter_count:
-            counter += 1
 
             dot_prod = np.sum(  
                     np.dot( self.filters[current_filter], inputs[x_min:x_max, y_min:y_max] )
@@ -66,8 +77,7 @@ class Convolutional(StrideLayer):
             
             #   values adjusted for next while-loop iteration
             x_min, x_max, y_min, y_max, current_filter = StrideLayer.increment_indexes(self, 
-                                                            *(x_min, x_max, y_min, y_max, current_filter), 
-                                                            max_stride
+                                                            *(x_min, x_max, y_min, y_max, current_filter),
                                                         )
 
         return resulting_matrix
@@ -80,6 +90,7 @@ class Pooling(StrideLayer):
     def __init__(self, pooling_type="max", kernel_size=2, stride=2):
         StrideLayer.__init__(self, kernel_size, stride)
 
+        #   assign the lambda function for pooling based on pooling_type given
         if pooling_type == "avg":
             self.pool = lambda a : np.sum(a)/a.size
         elif pooling_type == "max":
@@ -88,11 +99,14 @@ class Pooling(StrideLayer):
 
     def forward_propagation(self, inputs=None):
         
-        resulting_dimension = int( (inputs.shape[1] - self.size)/self.stride + 1 )
+        #   unlike Convolutional;
+        #   depth (z) of resulting matrix is depth of input matrix  
+        resulting_matrix = StrideLayer.return_resulting_matrix(self,
+                                inputs.shape[1], 
+                                inputs.shape[0]
+                            )
 
-        resulting_matrix = np.zeros((inputs.shape[0], resulting_dimension, resulting_dimension))
-
-        max_stride = inputs.shape[1] - self.size
+        StrideLayer.set_max_stride(self, inputs.shape[1])
 
         x_min, x_max = 0, self.size
         y_min, y_max = 0, self.size
@@ -106,8 +120,7 @@ class Pooling(StrideLayer):
             resulting_matrix[current_filter][int(x_min/2)][int(y_min/2)] = self.pool(pooling_matrix)
 
             x_min, x_max, y_min, y_max, current_filter = StrideLayer.increment_indexes(self, 
-                                                            *(x_min, x_max, y_min, y_max, current_filter), 
-                                                            max_stride
+                                                            *(x_min, x_max, y_min, y_max, current_filter)
                                                         )
 
         return resulting_matrix
@@ -135,9 +148,10 @@ class FullyConnected:
         outputs = np.array(outputs, ndmin=2).T
         inputs = np.array(inputs, ndmin=2).T
 
-        weight_errors = np.dot(self.weights.T, errors)
-
         self.weights += self.lr * np.dot((errors * outputs * (1.0 - outputs)), np.transpose(inputs))
+
+
+LEARNING_RATE = 0.1
 
 #   for testing purposes
 #   plots the given matrix so I can see what each
@@ -164,8 +178,6 @@ def main():
     #   double-padding to turn the input into a 32x32 matrix
     pixels = np.pad(pixels, (2, 2), 'constant')
 
-    learning_rate = 0.1
-
     #   create a dictionary of layers with their respective parameters
     layers = {
             "C1" : Convolutional(5, 6, 1),
@@ -173,8 +185,8 @@ def main():
             "C2" : Convolutional(5, 16, 1),
             "P2" : Pooling("avg"),
             "C3" : Convolutional(5, 120, 1),
-            "FC1" : FullyConnected(120, 84, learning_rate),
-            "FC2" : FullyConnected(84, 10, learning_rate)
+            "FC1" : FullyConnected(120, 84, LEARNING_RATE),
+            "FC2" : FullyConnected(84, 10, LEARNING_RATE)
     }
 
     #   apply forward propagation for all layers in the dictionary
@@ -188,16 +200,16 @@ def main():
     out_cv2 = ac.relu(out_cv2)
 
     out_pool2 = layers["P2"].forward_propagation(out_cv2)
-    out_pool2 = ac.tanh(out_pool2)
+    out_pool2 = ac.relu(out_pool2)
 
     out_cv3 = layers["C3"].forward_propagation(out_pool2)
-    out_cv3 = ac.tanh(out_cv3).flatten()
+    out_cv3 = ac.relu(out_cv3).flatten()
 
     out_fc1 = layers["FC1"].forward_propagation(out_cv3)
-    out_fc1 = ac.tanh(out_fc1).flatten()
+    out_fc1 = ac.relu(out_fc1).flatten()
 
     out_fc2 = layers["FC2"].forward_propagation(out_fc1)
-    out_fc2 = ac.tanh(out_fc2).flatten()
+    out_fc2 = ac.relu(out_fc2).flatten()
 
     final_output = ac.softmax(out_fc2)
 
