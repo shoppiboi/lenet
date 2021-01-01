@@ -65,15 +65,24 @@ class Convolutional(StrideLayer):
         x_min, x_max = 0, self.size
         y_min, y_max = 0, self.size
 
+        print(inputs.shape)
+
         current_filter = 0
         while current_filter < self.filter_count:
+            
+            temp_arr = []
+            if (len(inputs.shape) > 2):
+                for i in range(inputs.shape[0] - 1):
+                    dot_prod = np.dot( self.filters[current_filter], inputs[i][x_min:x_max, y_min:y_max] )
+                    sum_ = np.sum(dot_prod)
+                    temp_arr.append(sum_)
+            else:
+                dot_prod = np.dot( self.filters[current_filter], inputs[x_min:x_max, y_min:y_max] )
+                temp_arr.append(np.sum(dot_prod))
 
-            dot_prod = np.sum(  
-                    np.dot( self.filters[current_filter], inputs[x_min:x_max, y_min:y_max] )
-                    )
+            resulting_matrix[current_filter][x_min][y_min] = np.sum(temp_arr)
 
             #   replace 0 at given (z, x, y) position with the product
-            resulting_matrix[current_filter][x_min][y_min] = dot_prod
             
             #   values adjusted for next while-loop iteration
             x_min, x_max, y_min, y_max, current_filter = StrideLayer.increment_indexes(self, 
@@ -132,7 +141,7 @@ class FullyConnected:
         self.input_nodes = inputs
         self.output_nodes = outputs
         self.weights = np.random.normal(0.0, pow(self.input_nodes, -0.5), (self.output_nodes, self.input_nodes))
-        self.lr = learning_rate 
+        self.lr = learning_rate
 
     def forward_propagation(self, inputs):
 
@@ -169,7 +178,7 @@ def main():
 
     all_values = training_data_list[1].split(',')
 
-    pixels = (np.asfarray(all_values[:784]) / 255 * 0.99) + 0.01
+    pixels = (np.asfarray(all_values[:784])) #/ 255 * 0.99) + 0.01
     pixels = pixels.reshape(28, 28) 
 
     targets = np.zeros(10) + 0.01
@@ -180,11 +189,11 @@ def main():
 
     #   create a dictionary of layers with their respective parameters
     layers = {
-            "C1" : Convolutional(5, 6, 1),
-            "P1" : Pooling("avg"),
-            "C2" : Convolutional(5, 16, 1),
-            "P2" : Pooling("avg"),
-            "C3" : Convolutional(5, 120, 1),
+            "C1" : Convolutional(5, 6),
+            "P1" : Pooling("max"),
+            "C2" : Convolutional(5, 16),
+            "P2" : Pooling("max"),
+            "C3" : Convolutional(5, 120),
             "FC1" : FullyConnected(120, 84, LEARNING_RATE),
             "FC2" : FullyConnected(84, 10, LEARNING_RATE)
     }
@@ -211,15 +220,17 @@ def main():
     out_fc2 = layers["FC2"].forward_propagation(out_fc1)
     out_fc2 = ac.relu(out_fc2).flatten()
 
-    final_output = ac.softmax(out_fc2)
+    final_output = ac.sigmoid(out_fc2)
+
+    # print(final_output)
 
     #   apply back propagation for all layers in the dictionary
-    err_final_output = targets - final_output
+    # err_final_output = targets - final_output
 
-    layers["FC2"].back_propagation(err_final_output, final_output, out_fc1)
+    # layers["FC2"].back_propagation(err_final_output, final_output, out_fc1)
 
-    err_fc1 = np.dot(layers["FC2"].weights.T, out_fc2)
-    layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
+    # err_fc1 = np.dot(layers["FC2"].weights.T, out_fc2)
+    # layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
 
 if __name__ == '__main__':
     main()
