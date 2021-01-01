@@ -121,8 +121,15 @@ class Fully_Connected_Layer:
 
         return dot_product
 
-    def backward_propagation(self):
-        pass
+    def backward_propagation(self, errors, outputs, inputs):
+        
+        errors = np.array(errors, ndmin=2).T
+        outputs = np.array(outputs, ndmin=2).T
+        inputs = np.array(inputs, ndmin=2).T
+
+        weight_errors = np.dot(self.weights.T, errors)
+
+        self.weights += self.lr * np.dot((errors * outputs * (1.0 - outputs)), np.transpose(inputs))
 
 def main():
 
@@ -135,43 +142,51 @@ def main():
     pixels = (np.asfarray(all_values[:784]) / 255 * 0.99) + 0.01
     pixels = pixels.reshape(28, 28) 
 
+    targets = np.zeros(10) + 0.01
+    targets[int(all_values[784])] = 0.99
+
     #   double-padding to turn the input into a 32x32 matrix
     pixels = np.pad(pixels, (2, 2), 'constant')
 
     # plt.imshow(pixels)
     # plt.show()
 
-    C1 = Conv_Layer(5, 6, 1)
-    convo_1 = C1.forward_propagation(pixels)
+    layers = {
+            "C1" : Conv_Layer(5, 6, 1),
+            "P1" : Pool_Layer("avg"),
+            "C2" : Conv_Layer(5, 16, 1),
+            "P2" : Pool_Layer("avg"),
+            "C3" : Conv_Layer(5, 120, 1),
+            "FC1" : Fully_Connected_Layer(120, 84, 0.1),
+            "FC2" : Fully_Connected_Layer(84, 10, 0.1)
+    }
+
+    convo_1 = layers["C1"].forward_propagation(pixels)
     convo_1 = ac.tanh(convo_1)
 
-    P1 = Pool_Layer("avg")
-    pool_1 = P1.forward_propagation(convo_1)
+    pool_1 = layers["P1"].forward_propagation(convo_1)
     pool_1 = ac.tanh(pool_1)
 
-    C2 = Conv_Layer(5, 16, 1)
-    convo_2 = C2.forward_propagation(pool_1) 
+    convo_2 = layers["C2"].forward_propagation(pool_1) 
     convo_2 = ac.tanh(convo_2)
 
-    P2 = Pool_Layer("avg")
-    pool_2 = P2.forward_propagation(convo_2)
+    pool_2 = layers["P2"].forward_propagation(convo_2)
     pool_2 = ac.tanh(pool_2)
 
-    C3 = Conv_Layer(5, 120, 1)
-    convo_3 = C3.forward_propagation(pool_2)
+    convo_3 = layers["C3"].forward_propagation(pool_2)
     convo_3 = ac.tanh(convo_3).flatten()
 
-    FC1 = Fully_Connected_Layer(120, 84, 0.1)
-    fc_1 = FC1.forward_propagation(convo_3)
+    fc_1 = layers["FC1"].forward_propagation(convo_3)
     fc_1 = ac.tanh(fc_1).flatten()
 
-    FC2 = Fully_Connected_Layer(84, 10, 0.1)
-    fc_2 = FC2.forward_propagation(fc_1)
+    fc_2 = layers["FC2"].forward_propagation(fc_1)
     fc_2 = ac.tanh(fc_2).flatten()
 
     final_output = ac.softmax(fc_2)
+    errors = targets - final_output
 
-    print(final_output)
+    layers["FC2"].backward_propagation(errors, final_output, fc_1)
+
 
 if __name__ == '__main__':
     main()
