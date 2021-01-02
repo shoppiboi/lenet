@@ -1,1 +1,1 @@
-# lenet_implementation
+# LeNet Implementation (Python)
