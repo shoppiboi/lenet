@@ -50,7 +50,9 @@ class Convolutional(StrideLayer):
 
         self.filter_count = filter_count
         weight_dimension = (self.filter_count, self.size, self.size)
-        self.filters = np.random.normal(0.0, pow(variance_root, -0.5), (weight_dimension))
+        
+        #   "He - initialization" for the weights root(2/variance)
+        self.filters = np.random.normal(0.0, pow(2/variance_root, -0.5), (weight_dimension))
 
     def forward_propagation(self, inputs=None):
     
@@ -138,7 +140,9 @@ class FullyConnectedLayer:
 
         self.input_nodes = inputs
         self.output_nodes = outputs
-        self.weights = np.random.normal(0.0, pow(self.input_nodes, -0.5), (self.output_nodes, self.input_nodes))
+
+        #   "He initialization" for the weights
+        self.weights = np.random.normal(0.0, pow(2/self.input_nodes, -0.5), (self.output_nodes, self.input_nodes))
         self.lr = learning_rate
 
     def forward_propagation(self, inputs):
@@ -156,7 +160,6 @@ class FullyConnectedLayer:
         inputs = np.array(inputs, ndmin=2).T
 
         self.weights += self.lr * np.dot((errors * outputs * (1.0 - outputs)), np.transpose(inputs))
-
 
 LEARNING_RATE = 0.1
 
@@ -217,6 +220,9 @@ def main():
 
     out_fc2 = layers["FC2"].forward_propagation(out_fc1)
     final_output = ac.softmax(out_fc2)
+
+    print(final_output)
+    print(np.sum(final_output))
 
     #   apply back propagation for all layers in the dictionary
     # err_final_output = targets - final_output
