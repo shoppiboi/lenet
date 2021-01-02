@@ -45,12 +45,12 @@ class StrideLayer:
 
 class Convolutional(StrideLayer):
     
-    def __init__(self, kernel_size=5, filter_count=6, stride=1):
+    def __init__(self, kernel_size=5, filter_count=6, variance_root=32, stride=1):
         StrideLayer.__init__(self, kernel_size, stride)
 
         self.filter_count = filter_count
         weight_dimension = (self.filter_count, self.size, self.size)
-        self.filters = np.random.normal(0.0, pow(self.size, -0.5), (weight_dimension))
+        self.filters = np.random.normal(0.0, pow(variance_root, -0.5), (weight_dimension))
 
     def forward_propagation(self, inputs=None):
     
@@ -65,8 +65,6 @@ class Convolutional(StrideLayer):
         x_min, x_max = 0, self.size
         y_min, y_max = 0, self.size
 
-        print(inputs.shape)
-
         current_filter = 0
         while current_filter < self.filter_count:
             
@@ -80,9 +78,9 @@ class Convolutional(StrideLayer):
                 dot_prod = np.dot( self.filters[current_filter], inputs[x_min:x_max, y_min:y_max] )
                 temp_arr.append(np.sum(dot_prod))
 
+            #   replace 0 at given (z, x, y) position with the product
             resulting_matrix[current_filter][x_min][y_min] = np.sum(temp_arr)
 
-            #   replace 0 at given (z, x, y) position with the product
             
             #   values adjusted for next while-loop iteration
             x_min, x_max, y_min, y_max, current_filter = StrideLayer.increment_indexes(self, 
@@ -134,7 +132,7 @@ class Pooling(StrideLayer):
 
         return resulting_matrix
 
-class FullyConnected:
+class FullyConnectedLayer:
     
     def __init__(self, inputs, outputs, learning_rate):
 
@@ -178,7 +176,7 @@ def main():
 
     all_values = training_data_list[1].split(',')
 
-    pixels = (np.asfarray(all_values[:784])) #/ 255 * 0.99) + 0.01
+    pixels = (np.asfarray(all_values[:784]) / 255 * 0.99) + 0.01
     pixels = pixels.reshape(28, 28) 
 
     targets = np.zeros(10) + 0.01
@@ -189,40 +187,36 @@ def main():
 
     #   create a dictionary of layers with their respective parameters
     layers = {
-            "C1" : Convolutional(5, 6),
+            "C1" : Convolutional(5, 6, 32),
             "P1" : Pooling("max"),
-            "C2" : Convolutional(5, 16),
+            "C2" : Convolutional(5, 16, 28),
             "P2" : Pooling("max"),
-            "C3" : Convolutional(5, 120),
-            "FC1" : FullyConnected(120, 84, LEARNING_RATE),
-            "FC2" : FullyConnected(84, 10, LEARNING_RATE)
+            "C3" : Convolutional(5, 120, 14),
+            "FC1" : FullyConnectedLayer(120, 84, LEARNING_RATE),
+            "FC2" : FullyConnectedLayer(84, 10, LEARNING_RATE)
     }
 
     #   apply forward propagation for all layers in the dictionary
     out_cv1 = layers["C1"].forward_propagation(pixels)
-    out_cv1 = ac.relu(out_cv1)
+    out_cv1 = ac.tanh(out_cv1)
 
     out_pool1 = layers["P1"].forward_propagation(out_cv1)
-    out_pool1 = ac.relu(out_pool1)
+    out_pool1 = ac.tanh(out_pool1)
 
     out_cv2 = layers["C2"].forward_propagation(out_pool1) 
-    out_cv2 = ac.relu(out_cv2)
+    out_cv2 = ac.tanh(out_cv2)
 
     out_pool2 = layers["P2"].forward_propagation(out_cv2)
-    out_pool2 = ac.relu(out_pool2)
+    out_pool2 = ac.tanh(out_pool2)
 
     out_cv3 = layers["C3"].forward_propagation(out_pool2)
-    out_cv3 = ac.relu(out_cv3).flatten()
+    out_cv3 = ac.tanh(out_cv3).flatten()
 
     out_fc1 = layers["FC1"].forward_propagation(out_cv3)
-    out_fc1 = ac.relu(out_fc1).flatten()
+    out_fc1 = ac.tanh(out_fc1).flatten()
 
     out_fc2 = layers["FC2"].forward_propagation(out_fc1)
-    out_fc2 = ac.relu(out_fc2).flatten()
-
-    final_output = ac.sigmoid(out_fc2)
-
-    # print(final_output)
+    final_output = ac.softmax(out_fc2)
 
     #   apply back propagation for all layers in the dictionary
     # err_final_output = targets - final_output
