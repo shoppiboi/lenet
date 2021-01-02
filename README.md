@@ -1,6 +1,6 @@
 # LeNet Implementation (Python)
 
-**STILL WORK IN PROGRESS. Currently trying to implement backpropagation with the convolutional layers**
+## STILL UNDER WORK ##
 
 An OOP implementation of the LeNet CNN architecture. 
 I made this to further build upon the basics I learned after working through the book *Make Your Own Neural Network* by Tariq Rashid.
