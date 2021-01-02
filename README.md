@@ -1,8 +1,11 @@
 # LeNet Implementation (Python)
 
+**STILL WORK IN PROGRESS. Currently trying to implement backpropagation with the convolutional layers**
+
 An OOP implementation of the LeNet CNN architecture. 
 I made this to further build upon the basics I learned after working through the book *Make Your Own Neural Network* by Tariq Rashid.
 I decided against using any pre-made machine-learning libraries and to start from "scratch" to grasp a better understanding of what is happening "under the hood". 
+
 
 Libraries used:
 * [NumPy](https://numpy.org/) (1.19.3)
