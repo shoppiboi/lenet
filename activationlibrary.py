@@ -14,4 +14,4 @@ def sigmoid(inputs):
     return 1/(1+np.exp(-inputs))
 
 def tanh(inputs):
-    return (2/(1 + np.exp(-2*inputs))) - 1
+    return np.tanh(inputs)

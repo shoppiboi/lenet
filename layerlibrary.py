@@ -136,32 +136,26 @@ class Pooling(StrideLayer):
 
 class FullyConnectedLayer:
     
-    def __init__(self, inputs, outputs, learning_rate):
+    def __init__(self, inputs, outputs):
 
         self.input_nodes = inputs
         self.output_nodes = outputs
 
         #   "He initialization" for the weights
         self.weights = np.random.normal(0.0, pow(2/self.input_nodes, -0.5), (self.output_nodes, self.input_nodes))
-        self.lr = learning_rate
 
     def forward_propagation(self, inputs):
 
-        inputs_array = np.array(inputs, ndmin=2).T
-
-        dot_product = np.dot(self.weights, inputs_array)
+        dot_product = np.dot(self.weights, inputs)
 
         return dot_product
 
     def back_propagation(self, errors, outputs, inputs):
-        
-        errors = np.array(errors, ndmin=2).T
-        outputs = np.array(outputs, ndmin=2).T
-        inputs = np.array(inputs, ndmin=2).T
 
-        self.weights += self.lr * np.dot((errors * outputs * (1.0 - outputs)), np.transpose(inputs))
+        self.weights += LEARNING_RATE * np.dot((errors * outputs * (1.0 - outputs)), inputs.T)
 
-LEARNING_RATE = 0.1
+LEARNING_RATE = 0.03
+BIAS = 0
 
 #   for testing purposes
 #   plots the given matrix so I can see what each
@@ -171,19 +165,45 @@ def display_feature_maps(inputs):
         plt.imshow(inputs[x])
         plt.show()
 
+def return_cross_entropy(target, outputs):
+    actual_output = np.zeros(outputs.size) + 0.01
+
+    actual_output[int(target)] = 0.99
+
+    temp_arr = []
+
+    for x in range(actual_output.size):
+        temp_arr.append(
+                - ((actual_output[x] * np.log10(outputs[x])) + ((1 - actual_output[x]) * np.log10(1 - outputs[x])))
+        )
+
+    return np.sum(temp_arr)
+
+
+##################
+#   the main() function will be run on the network.py script
+
+#   Everything is here for now merely for efficiency's sake, but
+#   this script will be imported as a library in the network.py script
+#   just as how 'activationalibrary' has been imported in this script
+##################
+
 def main():
 
     training_data_file = open(r"C:\Users\ahasa\OneDrive\Asiakirjat\machine_learning\basic_network\mnist.csv")
     training_data_list = training_data_file.readlines()
     training_data_file.close()
 
+    #   split the columns on the .csv file by commas
     all_values = training_data_list[1].split(',')
 
+    #   reducing all values within the range of 0.01 and 1.0 to make the image grayscale
     pixels = (np.asfarray(all_values[:784]) / 255 * 0.99) + 0.01
     pixels = pixels.reshape(28, 28) 
 
-    targets = np.zeros(10) + 0.01
-    targets[int(all_values[784])] = 0.99
+    targets = np.zeros(10)
+    targets[int(all_values[784])] = 1
+    targets = np.array(targets, ndmin=2).T
 
     #   double-padding to turn the input into a 32x32 matrix
     pixels = np.pad(pixels, (2, 2), 'constant')
@@ -195,8 +215,8 @@ def main():
             "C2" : Convolutional(5, 16, 28),
             "P2" : Pooling("max"),
             "C3" : Convolutional(5, 120, 14),
-            "FC1" : FullyConnectedLayer(120, 84, LEARNING_RATE),
-            "FC2" : FullyConnectedLayer(84, 10, LEARNING_RATE)
+            "FC1" : FullyConnectedLayer(120, 84),
+            "FC2" : FullyConnectedLayer(84, 10) 
     }
 
     #   apply forward propagation for all layers in the dictionary
@@ -215,22 +235,23 @@ def main():
     out_cv3 = layers["C3"].forward_propagation(out_pool2)
     out_cv3 = ac.tanh(out_cv3).flatten()
 
+    out_cv3 = np.array(out_cv3, ndmin=2).T
     out_fc1 = layers["FC1"].forward_propagation(out_cv3)
     out_fc1 = ac.tanh(out_fc1).flatten()
 
+    out_fc1 = np.array(out_fc1, ndmin=2).T
     out_fc2 = layers["FC2"].forward_propagation(out_fc1)
+
     final_output = ac.softmax(out_fc2)
 
-    print(final_output)
-    print(np.sum(final_output))
-
     #   apply back propagation for all layers in the dictionary
-    # err_final_output = targets - final_output
+    output_errors = targets - final_output
 
-    # layers["FC2"].back_propagation(err_final_output, final_output, out_fc1)
+    err_fc1 = np.dot(layers["FC2"].weights.T, output_errors)
 
-    # err_fc1 = np.dot(layers["FC2"].weights.T, out_fc2)
-    # layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
+    layers["FC2"].back_propagation(output_errors, final_output, out_fc1)
+
+    layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
 
 if __name__ == '__main__':
     main()
