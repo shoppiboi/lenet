@@ -5,13 +5,6 @@ LEARNING_RATE = 0.03
 BIAS = 0
 ############ CONSTANTS
 
-class ActivationFunction:
-    def __init__(self, activation_type="softmax"):
-        if activation_type == "softmax":
-            self.activation = lambda a : np.exp(a)/a.sum()
-            # self.derivative = <insert lambda function for the derivative here once figured out>
-
-
 class StrideLayer:
 
     def __init__(self, kernel_size, stride):
@@ -193,12 +186,15 @@ def softmax_derivative(inputs):
 
     #   creates a numpy array of exponentials to the power of all inputs
     e_ = np.exp(inputs)
-    der_ = []
+    output = []
+
+    derivative = lambda a, b, c : (a * (np.sum(b))) / pow(np.sum(c), 2)
+
     for x in range(e_.size):
         #   append derivatives to the der_ array
-        der_.append( e_[x]*
-                        (np.sum([y for y in e_ if y != e_[x]])  # sum of all exponents excluding e_[x]
-                            / pow(np.sum(e_), 2))   #   divided by the (sum of all exponents).squared
-                    )
+        output.append(derivative(e_[x], #   current element
+                        [y for y in e_ if y != e_[x]],  #   all elements excluding current element
+                        e_) #   all elements
+                        )
 
-    return der_
+    return output
