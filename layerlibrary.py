@@ -1,6 +1,16 @@
 import numpy as np
-from matplotlib import pyplot as plt
-import activationlibrary as ac
+
+############ CONSTANTS
+LEARNING_RATE = 0.03
+BIAS = 0
+############ CONSTANTS
+
+class ActivationFunction:
+    def __init__(self, activation_type="softmax"):
+        if activation_type == "softmax":
+            self.activation = lambda a : np.exp(a)/a.sum()
+            # self.derivative = <insert lambda function for the derivative here once figured out>
+
 
 class StrideLayer:
 
@@ -40,12 +50,13 @@ class StrideLayer:
         #   the resulting matrix is of matrix-size (z, x, y)
         return np.zeros((z, resulting_dimension, resulting_dimension))
 
+    #   determine the maximum stride distance on the filter and store it as a variabe
     def set_max_stride(self, input_x):
         self.max_stride = input_x-self.size
 
 class Convolutional(StrideLayer):
     
-    def __init__(self, kernel_size=5, filter_count=6, variance_root=32, stride=1):
+    def __init__(self, kernel_size=5, filter_count=6, variance_root=32, stride=1, learning_rate=LEARNING_RATE):
         StrideLayer.__init__(self, kernel_size, stride)
 
         self.filter_count = filter_count
@@ -71,6 +82,7 @@ class Convolutional(StrideLayer):
         while current_filter < self.filter_count:
             
             temp_arr = []
+            #   if the input is three dimensional
             if (len(inputs.shape) > 2):
                 for i in range(inputs.shape[0] - 1):
                     dot_prod = np.dot( self.filters[current_filter], inputs[i][x_min:x_max, y_min:y_max] )
@@ -86,7 +98,7 @@ class Convolutional(StrideLayer):
             
             #   values adjusted for next while-loop iteration
             x_min, x_max, y_min, y_max, current_filter = StrideLayer.increment_indexes(self, 
-                                                            *(x_min, x_max, y_min, y_max, current_filter),
+                                                            *(x_min, x_max, y_min, y_max, current_filter),  #   tuple
                                                         )
 
         return resulting_matrix
@@ -96,7 +108,7 @@ class Convolutional(StrideLayer):
 
 class Pooling(StrideLayer):
 
-    def __init__(self, pooling_type="max", kernel_size=2, stride=2):
+    def __init__(self, pooling_type="max", kernel_size=2, stride=2, learning_rate=LEARNING_RATE):
         StrideLayer.__init__(self, kernel_size, stride)
 
         #   assign the lambda function for pooling based on pooling_type given
@@ -129,14 +141,14 @@ class Pooling(StrideLayer):
             resulting_matrix[current_filter][int(x_min/2)][int(y_min/2)] = self.pool(pooling_matrix)
 
             x_min, x_max, y_min, y_max, current_filter = StrideLayer.increment_indexes(self, 
-                                                            *(x_min, x_max, y_min, y_max, current_filter)
+                                                            *(x_min, x_max, y_min, y_max, current_filter)   #   tuple
                                                         )
 
         return resulting_matrix
 
 class FullyConnectedLayer:
     
-    def __init__(self, inputs, outputs):
+    def __init__(self, inputs, outputs, learning_rate=LEARNING_RATE):
 
         self.input_nodes = inputs
         self.output_nodes = outputs
@@ -154,104 +166,39 @@ class FullyConnectedLayer:
 
         self.weights += LEARNING_RATE * np.dot((errors * outputs * (1.0 - outputs)), inputs.T)
 
-LEARNING_RATE = 0.03
-BIAS = 0
-
 #   for testing purposes
 #   plots the given matrix so I can see what each
 #   feature map looks like
-def display_feature_maps(inputs):
-    for x in range(inputs.shape[0]):
-        plt.imshow(inputs[x])
-        plt.show()
 
 def return_cross_entropy(target, outputs):
-    actual_output = np.zeros(outputs.size) + 0.01
+    expected_output = np.zeros(outputs.size)
 
-    actual_output[int(target)] = 0.99
+    expected_output[int(target)] = 1
 
-    temp_arr = []
+    return np.sum(-((expected_output * np.log10(outputs)) + ((1 - expected_output) * np.log10(1 - outputs))))
 
-    for x in range(actual_output.size):
-        temp_arr.append(
-                - ((actual_output[x] * np.log10(outputs[x])) + ((1 - actual_output[x]) * np.log10(1 - outputs[x])))
-        )
+def return_derivative_cross_entropy(target, outputs):
+    expected_output = np.zeros(outputs.size)
 
-    return np.sum(temp_arr)
+    #   set expected output as 1
+    expected_output[int(target)] = 1
 
+    #   same formula as for normal cross entropy, except output values have been inversed
+    return -((expected_output * pow(outputs, -1)) + ((1 - expected_output) * pow((1 - outputs), -1))) 
 
-##################
-#   the main() function will be run on the network.py script
+#   returns the derivative of the softmax_inputs
+#   derivative of softmax layer with respect to output layer input
+#   e^[0] * (e^[1] + e^[2] + ... + e^[n]) / (e^[0]+e^[1]+e^[2]+...+e^[n])^2
+def softmax_derivative(inputs):
 
-#   Everything is here for now merely for efficiency's sake, but
-#   this script will be imported as a library in the network.py script
-#   just as how 'activationalibrary' has been imported in this script
-##################
+    #   creates a numpy array of exponentials to the power of all inputs
+    e_ = np.exp(inputs)
+    der_ = []
+    for x in range(e_.size):
+        #   append derivatives to the der_ array
+        der_.append( e_[x]*
+                        (np.sum([y for y in e_ if y != e_[x]])  # sum of all exponents excluding e_[x]
+                            / pow(np.sum(e_), 2))   #   divided by the (sum of all exponents).squared
+                    )
 
-def main():
-
-    training_data_file = open(r"C:\Users\ahasa\OneDrive\Asiakirjat\machine_learning\basic_network\mnist.csv")
-    training_data_list = training_data_file.readlines()
-    training_data_file.close()
-
-    #   split the columns on the .csv file by commas
-    all_values = training_data_list[1].split(',')
-
-    #   reducing all values within the range of 0.01 and 1.0 to make the image grayscale
-    pixels = (np.asfarray(all_values[:784]) / 255 * 0.99) + 0.01
-    pixels = pixels.reshape(28, 28) 
-
-    targets = np.zeros(10)
-    targets[int(all_values[784])] = 1
-    targets = np.array(targets, ndmin=2).T
-
-    #   double-padding to turn the input into a 32x32 matrix
-    pixels = np.pad(pixels, (2, 2), 'constant')
-
-    #   create a dictionary of layers with their respective parameters
-    layers = {
-            "C1" : Convolutional(5, 6, 32),
-            "P1" : Pooling("max"),
-            "C2" : Convolutional(5, 16, 28),
-            "P2" : Pooling("max"),
-            "C3" : Convolutional(5, 120, 14),
-            "FC1" : FullyConnectedLayer(120, 84),
-            "FC2" : FullyConnectedLayer(84, 10) 
-    }
-
-    #   apply forward propagation for all layers in the dictionary
-    out_cv1 = layers["C1"].forward_propagation(pixels)
-    out_cv1 = ac.tanh(out_cv1)
-
-    out_pool1 = layers["P1"].forward_propagation(out_cv1)
-    out_pool1 = ac.tanh(out_pool1)
-
-    out_cv2 = layers["C2"].forward_propagation(out_pool1) 
-    out_cv2 = ac.tanh(out_cv2)
-
-    out_pool2 = layers["P2"].forward_propagation(out_cv2)
-    out_pool2 = ac.tanh(out_pool2)
-
-    out_cv3 = layers["C3"].forward_propagation(out_pool2)
-    out_cv3 = ac.tanh(out_cv3).flatten()
-
-    out_cv3 = np.array(out_cv3, ndmin=2).T
-    out_fc1 = layers["FC1"].forward_propagation(out_cv3)
-    out_fc1 = ac.tanh(out_fc1).flatten()
-
-    out_fc1 = np.array(out_fc1, ndmin=2).T
-    out_fc2 = layers["FC2"].forward_propagation(out_fc1)
-
-    final_output = ac.softmax(out_fc2)
-
-    #   apply back propagation for all layers in the dictionary
-    output_errors = targets - final_output
-
-    err_fc1 = np.dot(layers["FC2"].weights.T, output_errors)
-
-    layers["FC2"].back_propagation(output_errors, final_output, out_fc1)
-
-    layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
-
-if __name__ == '__main__':
-    main()
+    return der_

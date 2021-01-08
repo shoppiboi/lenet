@@ -10,8 +10,13 @@ def softmax(inputs):
 
     return e/e.sum()
 
+def vals(inputs):
+    e = np.exp(inputs)
+
+    return np.log(inputs/e.sum())
+
 def sigmoid(inputs):
     return 1/(1+np.exp(-inputs))
 
 def tanh(inputs):
-    return np.tanh(inputs)
+    return np.tanh(inputs) 
