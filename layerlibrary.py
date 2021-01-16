@@ -155,29 +155,32 @@ class FullyConnectedLayer:
 
         return dot_product
 
-    def back_propagation(self, errors, outputs, inputs):
+    def back_propagation(self, error_derivative):
 
-        self.weights += LEARNING_RATE * np.dot((errors * outputs * (1.0 - outputs)), inputs.T)
+        # print(error_derivative.shape)
 
-#   for testing purposes
-#   plots the given matrix so I can see what each
-#   feature map looks like
+        self.weights += LEARNING_RATE * error_derivative
 
 def return_cross_entropy(target, outputs):
     expected_output = np.zeros(outputs.size)
 
-    expected_output[int(target)] = 1
+    print(expected_output.shape)
+
+    expected_output[target] = 1
 
     return np.sum(-((expected_output * np.log10(outputs)) + ((1 - expected_output) * np.log10(1 - outputs))))
 
 def return_derivative_cross_entropy(target, outputs):
     expected_output = np.zeros(outputs.size)
+    expected_output = np.reshape(outputs.size, 1)
 
     #   set expected output as 1
     expected_output[int(target)] = 1
 
     #   same formula as for normal cross entropy, except output values have been inversed
-    return -((expected_output * pow(outputs, -1)) + ((1 - expected_output) * pow((1 - outputs), -1))) 
+    return np.array(-((expected_output * pow(outputs, -1)) + ((1 - expected_output) * pow((1 - outputs), -1))))
+
+
 
 #   returns the derivative of the softmax_inputs
 #   derivative of softmax layer with respect to output layer input
@@ -197,4 +200,12 @@ def softmax_derivative(inputs):
                         e_) #   all elements
                         )
 
-    return output
+    return np.array(output)
+    
+def return_derivative_input_output_weights(inputs, shape):
+
+    temp = np.tile(inputs, shape)
+
+    # print(temp)
+
+    return temp

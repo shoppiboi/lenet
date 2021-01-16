@@ -3,6 +3,9 @@ import layerlibrary as ll
 import activationlibrary as ac
 from matplotlib import pyplot as plt
 
+#   for testing purposes
+#   plots the given matrix so I can see what each
+#   feature map looks like
 def display_feature_maps(inputs):
     for x in range(inputs.shape[0]):
         plt.imshow(inputs[x])
@@ -62,18 +65,19 @@ def main():
     out_fc1 = np.array(out_fc1, ndmin=2).T
     out_fc2 = layers["FC2"].forward_propagation(out_fc1)
 
-    final_output = ac.softmax(out_fc2)
+    final_output = ac.softmax(out_fc2)    
 
-    #   apply backpropagation for all layers in the dictionary
-    output_errors = targets - final_output
-    
-    ll.softmax_derivative(np.array([1.8658, 2.2292, 2.8204]))
+    #   calculate the derivative of cross entropy
+    cross_entropy_der = ll.return_derivative_cross_entropy(0, final_output)
 
-    err_fc1 = np.dot(layers["FC2"].weights.T, output_errors)
+    #   calculate the derivative of pre-softmax (before application of softmax) output
+    softmax_der = ll.softmax_derivative(out_fc2)
 
-    layers["FC2"].back_propagation(output_errors, final_output, out_fc1)
+    #   perform chain rule with the obtained derivatives to get error_derivative   
+    error_derivative = np.dot(cross_entropy_der * softmax_der, out_fc1.T)
+    layers["FC2"].back_propagation(error_derivative)
 
-    layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
+    # layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
 
 if __name__ == '__main__':
     main()
