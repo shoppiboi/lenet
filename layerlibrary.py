@@ -1,7 +1,7 @@
 import numpy as np
 
 ############ CONSTANTS
-LEARNING_RATE = 0.03
+LEARNING_RATE = 0.3
 BIAS = 0
 ############ CONSTANTS
 
@@ -126,7 +126,6 @@ class Pooling(StrideLayer):
         y_min, y_max = 0, self.size
 
         current_filter = 0
-
         while current_filter < inputs.shape[0]:
             pooling_matrix = inputs[current_filter][x_min:x_max, y_min:y_max]
 
@@ -141,24 +140,22 @@ class Pooling(StrideLayer):
 
 class FullyConnectedLayer:
     
-    def __init__(self, inputs, outputs, learning_rate=LEARNING_RATE):
+    def __init__(self, inputs, outputs):
 
         self.input_nodes = inputs
         self.output_nodes = outputs
 
         #   "He initialization" for the weights
-        self.weights = np.random.normal(0.0, pow(2/self.input_nodes, -0.5), (self.output_nodes, self.input_nodes))
+        self.weights = np.random.normal(0.0, pow(self.input_nodes, -0.5), (self.output_nodes, self.input_nodes))
 
     def forward_propagation(self, inputs):
 
         dot_product = np.dot(self.weights, inputs)
 
-        return dot_product
+        return np.array(dot_product, ndmin=2)
 
     def back_propagation(self, error_derivative):
-
-        # print(error_derivative.shape)
-
+        
         self.weights += LEARNING_RATE * error_derivative
 
 def return_cross_entropy(target, outputs):
@@ -179,8 +176,6 @@ def return_derivative_cross_entropy(target, outputs):
 
     #   same formula as for normal cross entropy, except output values have been inversed
     return np.array(-((expected_output * pow(outputs, -1)) + ((1 - expected_output) * pow((1 - outputs), -1))))
-
-
 
 #   returns the derivative of the softmax_inputs
 #   derivative of softmax layer with respect to output layer input
@@ -205,7 +200,5 @@ def softmax_derivative(inputs):
 def return_derivative_input_output_weights(inputs, shape):
 
     temp = np.tile(inputs, shape)
-
-    # print(temp)
 
     return temp

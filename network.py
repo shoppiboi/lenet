@@ -60,24 +60,25 @@ def main():
 
     out_cv3 = np.array(out_cv3, ndmin=2).T
     out_fc1 = layers["FC1"].forward_propagation(out_cv3)
-    out_fc1 = ac.softmax(out_fc1).flatten()
+    fc1_activated = ac.softmax(out_fc1).flatten()
 
-    out_fc1 = np.array(out_fc1, ndmin=2).T
+    out_fc1 = np.array(fc1_activated, ndmin=2).T
     out_fc2 = layers["FC2"].forward_propagation(out_fc1)
-
-    final_output = ac.softmax(out_fc2)    
+    fc2_activated = ac.softmax(out_fc2)
 
     #   calculate the derivative of cross entropy
-    cross_entropy_der = ll.return_derivative_cross_entropy(0, final_output)
-
+    cross_entropy_der = ll.return_derivative_cross_entropy(0, fc2_activated)
     #   calculate the derivative of pre-softmax (before application of softmax) output
-    softmax_der = ll.softmax_derivative(out_fc2)
-
+    fc2_softmax_der = ll.softmax_derivative(out_fc2)
     #   perform chain rule with the obtained derivatives to get error_derivative   
-    error_derivative = np.dot(cross_entropy_der * softmax_der, out_fc1.T)
-    layers["FC2"].back_propagation(error_derivative)
+    fc2_error_der = np.dot(cross_entropy_der * fc2_softmax_der, out_fc1.T)
+    layers["FC2"].back_propagation(fc2_error_der)
 
-    # layers["FC1"].back_propagation(err_fc1, out_fc1, out_cv3)
+    #   same principle as for FC2, with the exception of not using cross_entropy_der
+    fc1_softmax_der = ll.softmax_derivative(out_fc1)
+    dot_prod = np.dot(layers["FC2"].weights.T, cross_entropy_der * fc2_softmax_der)
+    fc1_error_derivative = np.dot(fc1_softmax_der * dot_prod, out_cv3.T)
+    layers["FC1"].back_propagation(fc1_error_derivative)
 
 if __name__ == '__main__':
     main()

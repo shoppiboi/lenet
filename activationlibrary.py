@@ -16,7 +16,10 @@ def vals(inputs):
     return np.log(inputs/e.sum())
 
 def sigmoid(inputs):
-    return 1/(1+np.exp(-inputs))
+    return np.array(1/(1+np.exp(-inputs)), ndmin=2)
+
+def sigmoid_derivative(inputs):
+    return np.array(inputs*(1.0 - inputs), ndmin=2)
 
 def tanh(inputs):
     return np.tanh(inputs) 
