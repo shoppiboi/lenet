@@ -9,8 +9,8 @@ I decided against using any pre-made machine-learning libraries and to start fro
 
 Libraries used:
 * [NumPy](https://numpy.org/) (1.19.3)
-* [matplotlib](https://matplotlib.org/) (3.3.3)
 
 Resources used:
 * [*Make Your Own Neural Network*, Tariq Rashid](https://www.amazon.co.uk/Make-Your-Own-Neural-Network-ebook/dp/B01EER4Z4G)
 * [*CS231n Convolutional Neural Networks For Visual Recognition*, Stanford](https://cs231n.github.io/convolutional-networks/)
+* [*Back Propagation in Convolutional Neural Networks*, Jefkine](https://www.jefkine.com/general/2016/09/05/backpropagation-in-convolutional-neural-networks/)
